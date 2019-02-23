@@ -12,7 +12,6 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.Gmail;
-import com.google.api.services.gmail.GmailScopes;
 import com.google.api.services.gmail.model.Label;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
@@ -36,14 +35,8 @@ import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-
-//import com.sun.tools.sjavac.Log;
-
-//import com.sun.org.apache.xpath.internal.operations.String;
-//import jdk.internal.jline.internal.Log;
 
 
 @Controller
@@ -71,6 +64,63 @@ public class GoogleMailController {
     @Value("${gmail.client.scope}")
     private List<String> scope;
 
+    public static Message createMessageWithEmail(MimeMessage email, String threadId)
+            throws MessagingException, IOException {
+        System.out.println("In create createMessageWithEmail");
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        email.writeTo(baos);
+
+        String encodedEmail = Base64.encodeBase64URLSafeString(baos.toByteArray());
+        Message message = new Message();
+        message.setThreadId(threadId);
+        message.setRaw(encodedEmail);
+
+        return message;
+    }
+
+    public static MimeMessage createEmail(String to,
+                                          String from,
+                                          String subject,
+                                          String bodyText)
+            throws MessagingException {
+        System.out.println("In createEmail");
+        Properties props = new Properties();
+        Session session = Session.getDefaultInstance(props, null);
+
+        MimeMessage email = new MimeMessage(session);
+
+        email.setFrom(new InternetAddress(from));
+        email.addRecipient(javax.mail.Message.RecipientType.TO,
+                new InternetAddress(to));
+        email.setSubject(subject);
+        email.setText(bodyText);
+        return email;
+    }
+
+    /**
+     * Send an email from the user's mailbox to its recipient.
+     *
+     * @param service      Authorized Gmail API instance.
+     * @param userId       User's email address. The special value "me"
+     *                     can be used to indicate the authenticated user.
+     * @param emailContent Email to be sent.
+     * @return The sent message
+     * @throws MessagingException
+     * @throws IOException
+     */
+    public static Message sendMessage(Gmail service,
+                                      String userId,
+                                      MimeMessage emailContent, String threadId)
+            throws MessagingException, IOException {
+        Message message = createMessageWithEmail(emailContent, threadId);
+        System.out.println("In send Message!");
+        message = service.users().messages().send(userId, message).execute();
+
+        System.out.println("Message id: " + message.getId());
+        System.out.println(message.toPrettyString());
+        return message;
+    }
 
     @RequestMapping(value = "/login/gmail", method = RequestMethod.GET)
     public RedirectView googleConnectionStatus(HttpServletRequest request) throws Exception {
@@ -105,7 +155,7 @@ public class GoogleMailController {
              */
 
             String userId = "me";
-            String query = "subject:'SIH19'";
+            String query = "subject:'SIH'";
 
             System.out.println("code->" + code + " userId->" + userId + " query->" + query);
 
@@ -170,70 +220,12 @@ public class GoogleMailController {
             httpTransport = GoogleNetHttpTransport.newTrustedTransport();
 //            flow = new GoogleAuthorizationCodeFlow.Builder(httpTransport, JSON_FACTORY, clientSecrets,
 //                    Collections.list(GmailScopes.GMAIL_MODIFY,GmailScopes.GMAIL_SEND)).build();
-            flow=new GoogleAuthorizationCodeFlow.Builder(httpTransport,JSON_FACTORY,clientSecrets,scope).build();
+            flow = new GoogleAuthorizationCodeFlow.Builder(httpTransport, JSON_FACTORY, clientSecrets, scope).build();
         }
         authorizationUrl = flow.newAuthorizationUrl().setRedirectUri(redirectUri);
 
         System.out.println("gamil authorizationUrl ->" + authorizationUrl);
         return authorizationUrl.build();
-    }
-
-    public static Message createMessageWithEmail(MimeMessage email, String threadId)
-            throws MessagingException, IOException {
-        System.out.println("In create createMessageWithEmail");
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        email.writeTo(baos);
-
-        String encodedEmail = Base64.encodeBase64URLSafeString(baos.toByteArray());
-        Message message = new Message();
-        message.setThreadId(threadId);
-        message.setRaw(encodedEmail);
-
-        return message;
-    }
-
-    public static MimeMessage createEmail(String to,
-                                          String from,
-                                          String subject,
-                                          String bodyText)
-            throws MessagingException {
-        System.out.println("In createEmail");
-        Properties props = new Properties();
-        Session session = Session.getDefaultInstance(props, null);
-
-        MimeMessage email = new MimeMessage(session);
-
-        email.setFrom(new InternetAddress(from));
-        email.addRecipient(javax.mail.Message.RecipientType.TO,
-                new InternetAddress(to));
-        email.setSubject(subject);
-        email.setText(bodyText);
-        return email;
-    }
-
-    /**
-     * Send an email from the user's mailbox to its recipient.
-     *
-     * @param service      Authorized Gmail API instance.
-     * @param userId       User's email address. The special value "me"
-     *                     can be used to indicate the authenticated user.
-     * @param emailContent Email to be sent.
-     * @return The sent message
-     * @throws MessagingException
-     * @throws IOException
-     */
-    public static Message sendMessage(Gmail service,
-                                      String userId,
-                                      MimeMessage emailContent, String threadId)
-            throws MessagingException, IOException {
-        Message message = createMessageWithEmail(emailContent, threadId);
-        System.out.println("In send Message!");
-        message = service.users().messages().send(userId, message).execute();
-
-        System.out.println("Message id: " + message.getId());
-        System.out.println(message.toPrettyString());
-        return message;
     }
 
 
