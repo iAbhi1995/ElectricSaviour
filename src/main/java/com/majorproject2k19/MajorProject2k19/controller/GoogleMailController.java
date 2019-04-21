@@ -1,4 +1,4 @@
-package com.smartindia2k19.hackathon.Smartindia2k19.Controller;
+package com.majorproject2k19.MajorProject2k19.controller;
 
 import com.google.api.client.auth.oauth2.AuthorizationCodeRequestUrl;
 import com.google.api.client.auth.oauth2.Credential;
@@ -12,15 +12,13 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.Gmail;
-import com.google.api.services.gmail.model.Label;
-import com.google.api.services.gmail.model.ListMessagesResponse;
-import com.google.api.services.gmail.model.Message;
-import com.google.api.services.gmail.model.MessagePartHeader;
+import com.google.api.services.gmail.model.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -35,6 +33,8 @@ import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.Thread;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -43,7 +43,7 @@ import java.util.Properties;
 @RestController
 public class GoogleMailController {
 
-    private static final String APPLICATION_NAME = "Smartindia2k19";
+    private static final String APPLICATION_NAME = "MajorProject2k19";
     private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
     private static HttpTransport httpTransport;
     private static com.google.api.services.gmail.Gmail client;
@@ -124,8 +124,6 @@ public class GoogleMailController {
 
     @RequestMapping(value = "/login/gmail", method = RequestMethod.GET)
     public RedirectView googleConnectionStatus(HttpServletRequest request) throws Exception {
-//        for(String x:scope)
-//            System.out.println("Scope:"+x);
         return new RedirectView(authorize());
     }
 
@@ -143,72 +141,95 @@ public class GoogleMailController {
 
             client = new com.google.api.services.gmail.Gmail.Builder(httpTransport, JSON_FACTORY, credential)
                     .setApplicationName(APPLICATION_NAME).build();
-
-            /*
-             * Filter filter = new Filter().setCriteria(new
-             * FilterCriteria().setFrom("a2cart.com@gmail.com"))
-             * .setAction(new FilterAction()); Filter result =
-             * client.users().settings().filters().create("me",
-             * filter).execute();
-             *
-             * System.out.println("Created filter " + result.getId());
-             */
-
-            String userId = "me";
-            String query = "subject:'SIH'";
-
-            System.out.println("code->" + code + " userId->" + userId + " query->" + query);
-
-
-            ListMessagesResponse MsgResponse = client.users().messages().list(userId).setQ(query).execute();
-            ListMessagesResponse msgs = client.users().messages().list(userId).execute();
-            List<Label> labels = client.users().labels().list(userId).execute().getLabels();
-            System.out.println("Labels : ");
-            for (Label x : labels) {
-                if (x.getId().equals("INBOX"))
-                    System.out.println(x.toPrettyString());
-                System.out.println(x.getMessagesUnread() + " " + x.getName());
-            }
-
-
-//            List<Message> messages = new ArrayList<>();
-
-            System.out.println("message length:" + MsgResponse.getMessages().size());
-
-//            MimeMessage message=new MimeMessage();
-            String to = null, from = null, replyMsg = "Here is the reply", subject = null;
-
-            for (Message msg : MsgResponse.getMessages()) {
-                System.out.println(msg.getId());
-                System.out.println(msg.toPrettyString());
-                Message message = client.users().messages().get(userId, msg.getId()).execute();
-                System.out.println(message);
-                if (message.getLabelIds().contains("UNREAD"))
-                    System.out.println("snippet : " + message.getSnippet());
-                List<MessagePartHeader> msgHeaders = message.getPayload().getHeaders();
-                for (MessagePartHeader y : msgHeaders) {
-                    if (y.getName().equals("From")) {
-                        to = y.getValue();
-                        System.out.println("From : " + to);
-                    } else if (y.getName().equals("Subject")) {
-                        subject = y.getValue();
-                    } else if (y.getName().equals("Delivered-To")) {
-                        from = y.getValue();
-                    }
-                }
-                MimeMessage message1 = createEmail(to, from, subject, replyMsg);
-                sendMessage(client, userId, message1, msg.getThreadId());
-//                client.users().messages().send(userId, new Message().setSnippet(msg.getSnippet())).execute();
-            }
-
+            checkForNewMails();
         } catch (Exception e) {
 
             System.out.println("exception cached ");
             e.printStackTrace();
         }
-
         return new ResponseEntity<>(json.toString(), HttpStatus.OK);
     }
+
+    @Scheduled(initialDelay = 30*1000,fixedRate = 60*1000)
+    public void checkForNewMails() {
+        System.out.println("Thread Name : " + Thread.currentThread().getName());
+        /*
+         * Filter filter = new Filter().setCriteria(new
+         * FilterCriteria().setFrom("a2cart.com@gmail.com"))
+         * .setAction(new FilterAction()); Filter result =
+         * client.users().settings().filters().create("me",
+         * filter).execute();
+         *
+         * System.out.println("Created filter " + result.getId());
+         */
+
+        String userId = "me";
+        String query = "subject:'SIH19'";
+
+//        System.out.println("code->" + code + " userId->" + userId + " query->" + query);
+
+        try
+        {
+//            ListMessagesResponse MsgResponse = client.users().messages().list(userId).setQ(query).execute();
+            ListMessagesResponse MsgResponse = client.users().messages().list(userId).execute();
+            List<Label> labels = client.users().labels().list(userId).execute().getLabels();
+            System.out.println("Labels : ");
+
+//            for (Label x : labels)
+//            {
+//                if (x.getId().equals("INBOX"))
+//                    System.out.println(x.toPrettyString());
+//                System.out.println(x.getMessagesUnread() + " " + x.getName());
+//            }
+
+            System.out.println("message length:" + MsgResponse.getMessages().size());
+
+            String to = null, from = null, replyMsg = "Here is the reply", subject = null;
+
+            for (Message msg : MsgResponse.getMessages())
+            {
+
+
+                Message message = client.users().messages().get(userId, msg.getId()).execute();
+//                System.out.println(message);
+
+                String threadId=message.getThreadId();//thread id to send a reply to the same thread
+
+                //Getting the basic properties from the unread mail
+                if (message.getLabelIds().contains("UNREAD"))
+                {
+                    System.out.println(msg.getId());
+                    System.out.println(msg.toPrettyString());
+                    System.out.println("snippet : " + message.getSnippet());
+                    List<MessagePartHeader> msgHeaders = message.getPayload().getHeaders();
+                    for (MessagePartHeader y : msgHeaders) {
+                        if (y.getName().equals("From")) {
+                            to = y.getValue();
+                            System.out.println("From : " + to);
+                        } else if (y.getName().equals("Subject")) {
+                            subject = "Re: " + y.getValue();
+                        } else if (y.getName().equals("Delivered-To")) {
+                            from = y.getValue();
+                        }
+                    }
+
+                    //Making the message as read : removing the unread label
+                    List<String> labelsToRemove=new ArrayList<>();
+                    labelsToRemove.add("UNREAD");
+                    ModifyThreadRequest mods = new ModifyThreadRequest()
+                            .setRemoveLabelIds(labelsToRemove);
+                    com.google.api.services.gmail.model.Thread thread = client.users().threads().modify(userId, threadId, mods).execute();
+
+                    MimeMessage message1 = createEmail(to, userId, subject, replyMsg);
+                    sendMessage(client, userId, message1, threadId);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Error in the checkNewMail  method!!!!");
+        }
+    }
+
 
     private String authorize() throws Exception {
         AuthorizationCodeRequestUrl authorizationUrl;
@@ -227,6 +248,4 @@ public class GoogleMailController {
         System.out.println("gamil authorizationUrl ->" + authorizationUrl);
         return authorizationUrl.build();
     }
-
-
 }

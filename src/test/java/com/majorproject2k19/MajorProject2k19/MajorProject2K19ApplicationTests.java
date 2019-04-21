@@ -1,4 +1,4 @@
-package com.smartindia2k19.hackathon.Smartindia2k19;
+package com.majorproject2k19.MajorProject2k19;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -7,7 +7,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
-public class Smartindia2k19ApplicationTests {
+public class MajorProject2K19ApplicationTests {
 
 	@Test
 	public void contextLoads() {
